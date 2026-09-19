@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CBT D'Ajiks Academy - Simulasi ANBK</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- MathJax CDN untuk render LaTeX/matematika -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      svg: {
+        fontCache: 'global'
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    body {
+      user-select: none;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col font-sans">
+
+  <!-- ================= PAGE LOGIN ================= -->
+  <div id="login-page" class="flex-1 flex items-center justify-center p-4">
+    <div class="bg-white p-8 rounded-lg shadow-md max-w-md w-full border border-gray-200">
+      <div class="text-center mb-6">
+        <h1 class="text-2xl font-bold text-sky-700">D'Ajiks Academy</h1>
+        <p class="text-sm text-gray-500 mt-1">Simulasi Ujian Berbasis Komputer (ANBK)</p>
+      </div>
+      
+      <form id="login-form" onsubmit="startExam(event)">
+        <div class="mb-4">
+          <label for="student-name" class="block text-sm font-semibold text-gray-700 mb-1">Nama Peserta</label>
+          <input type="text" id="student-name" required placeholder="Masukkan nama lengkap" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+        </div>
+        <div class="mb-6">
+          <label for="student-password" class="block text-sm font-semibold text-gray-700 mb-1">Password</label>
+          <input type="password" id="student-password" required placeholder="Masukkan password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+          <p id="password-error" class="text-red-500 text-xs mt-1 hidden">Password salah! Silakan coba lagi.</p>
+        </div>
+        <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2.5 rounded-md transition duration-200 shadow">
+          Mulai Ujian
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= EXAM CONTAINER ================= -->
+  <div id="exam-page" class="hidden flex-1 flex-col h-screen overflow-hidden">
+    
+    <!-- HEADER BIRU MUDA -->
+    <header class="bg-sky-200 border-b border-sky-300 px-4 py-3 flex flex-wrap justify-between items-center text-sky-950 shrink-0">
+      <div class="font-bold text-lg tracking-wide">
+        D'Ajiks Academy
+      </div>
+      <div class="flex items-center space-x-6 text-sm md:text-base font-medium">
+        <div>Peserta: <span id="display-name" class="font-bold text-sky-900">-</span></div>
+        <div class="bg-white px-3 py-1 rounded shadow-sm border border-sky-300">
+          Sisa Waktu: <span id="timer" class="font-mono font-bold text-red-600">00:28:00</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- UTAMA: AREA SOAL & NAVIGASI NOMOR -->
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden p-4 gap-4 max-w-7xl w-full mx-auto">
+      
+      <!-- KIRI / ATAS: AREA SOAL -->
+      <main class="flex-1 bg-white rounded-lg border border-gray-300 shadow-sm flex flex-col overflow-hidden">
+        
+        <!-- Header Soal -->
+        <div class="bg-gray-50 px-6 py-3 border-b border-gray-200 flex justify-between items-center shrink-0">
+          <span class="font-bold text-gray-700 text-lg">Soal No. <span id="question-number">1</span></span>
+          <span class="text-xs bg-sky-100 text-sky-800 px-2.5 py-1 rounded-full font-semibold">Penalaran Logis</span>
+        </div>
+
+        <!-- Isian Soal & Pilihan -->
+        <div class="p-6 overflow-y-auto flex-1">
+          <div id="question-text" class="text-gray-800 text-base md:text-lg mb-6 leading-relaxed whitespace-pre-line">
+            <!-- Teks Soal Dimuat via JS -->
+          </div>
+
+          <div id="options-container" class="space-y-3">
+            <!-- Pilihan Ganda Dimuat via JS -->
+          </div>
+        </div>
+
+        <!-- Tombol Navigasi Bawah -->
+        <footer class="bg-gray-50 px-4 py-3 border-t border-gray-200 flex flex-wrap justify-between items-center gap-2 shrink-0">
+          <button id="btn-prev" onclick="prevQuestion()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded text-sm transition shadow disabled:opacity-50 disabled:cursor-not-allowed">
+            &laquo; Soal Sebelumnya
+          </button>
+          
+          <label class="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-4 py-2 rounded text-sm cursor-pointer select-none transition shadow flex items-center gap-2">
+            <input type="checkbox" id="cb-doubt" onchange="toggleDoubt()" class="w-4 h-4 rounded text-yellow-600 focus:ring-yellow-400">
+            <span>Ragu-Ragu</span>
+          </label>
+
+          <button id="btn-next" onclick="handleNextOrFinish()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded text-sm transition shadow">
+            Soal Berikutnya &raquo;
+          </button>
+        </footer>
+
+      </main>
+
+      <!-- KANAN / BAWAH: DAFTAR NOMOR SOAL -->
+      <aside class="w-full md:w-72 bg-white rounded-lg border border-gray-300 shadow-sm flex flex-col h-64 md:h-full shrink-0">
+        <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 font-bold text-gray-700 text-center shrink-0">
+          Daftar Soal
+        </div>
+        
+        <div id="question-grid" class="p-4 grid grid-cols-5 gap-2.5 overflow-y-auto max-h-full">
+          <!-- Kotak Nomor Dimuat via JS -->
+        </div>
+
+        <div class="p-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-600 flex justify-around shrink-0">
+          <div class="flex items-center gap-1">
+            <span class="w-3 h-3 bg-gray-200 border border-gray-400 rounded-sm inline-block"></span> Belum
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="w-3 h-3 bg-green-500 rounded-sm inline-block"></span> Dijawab
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="w-3 h-3 bg-yellow-400 rounded-sm inline-block"></span> Ragu
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- ================= RESULT & REVIEW PAGE ================= -->
+  <div id="result-page" class="hidden flex-1 flex-col p-4 md:p-8 max-w-5xl mx-auto w-full overflow-y-auto">
+    <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-6 text-center">
+      <h2 class="text-2xl font-bold text-sky-800">Hasil Ujian - D'Ajiks Academy</h2>
+      <p class="text-gray-600 mt-1">Nama Peserta: <span id="result-student-name" class="font-semibold text-gray-800"></span></p>
+      
+      <div class="flex justify-center items-center gap-6 my-6">
+        <div class="bg-sky-50 border border-sky-200 p-4 rounded-lg min-w-[120px]">
+          <div class="text-xs text-gray-500 uppercase font-bold">Total Benar</div>
+          <div id="score-correct" class="text-3xl font-bold text-green-600">0</div>
+        </div>
+        <div class="bg-sky-50 border border-sky-200 p-4 rounded-lg min-w-[120px]">
+          <div class="text-xs text-gray-500 uppercase font-bold">Total Salah</div>
+          <div id="score-wrong" class="text-3xl font-bold text-red-600">0</div>
+        </div>
+        <div class="bg-sky-600 text-white p-4 rounded-lg min-w-[140px] shadow">
+          <div class="text-xs uppercase font-bold text-sky-100">Skor Akhir</div>
+          <div id="score-final" class="text-4xl font-extrabold">0</div>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500">*Skor dihitung dari Total Benar × 5 poin.</p>
+    </div>
+
+    <!-- DAFTAR KOREKSI DAN PEMBAHASAN -->
+    <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+      <h3 class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b">Koreksi Jawaban & Pembahasan</h3>
+      <div id="review-container" class="space-y-6">
+        <!-- Review Per Soal Dimuat via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= JAVASCRIPT ================= -->
+  <script>
+    // DATA BANK SOAL LENGKAP 38 NOMOR
+    const questions = [
+      {
+        id: 1,
+        text: "Beberapa atlet nasional pandai berenang.\nSemua yang pandai berenang memiliki stamina yang tinggi.\nKesimpulan yang tepat adalah .....",
+        options: [
+          "Semua atlet nasional memiliki stamina yang tinggi.",
+          "Sebagian yang memiliki stamina tinggi adalah atlet nasional.",
+          "Yang memiliki stamina tinggi adalah atlet nasional.",
+          "Semua yang memiliki stamina tinggi pandai berenang.",
+          "Atlet nasional pasti tidak pandai berenang."
+        ],
+        key: 1,
+        explanation: "Premis: Sebagian A $\\rightarrow$ B, Semua B $\\rightarrow$ C. Kesimpulan: Sebagian A $\\rightarrow$ C (Sebagian atlet nasional stamina tinggi) $\\equiv$ Sebagian yang stamina tinggi adalah atlet nasional."
+      },
+      {
+        id: 2,
+        text: "Beberapa pegawai kantor mengenakan seragam putih.\nSemua yang mengenakan seragam putih adalah anggota koperasi.\nKesimpulan yang tepat adalah .....",
+        options: [
+          "Semua pegawai kantor adalah anggota koperasi.",
+          "Semua anggota koperasi mengenakan seragam putih.",
+          "Sebagian anggota koperasi adalah pegawai kantor.",
+          "Pegawai kantor tidak ada yang menjadi anggota koperasi.",
+          "Sebagian yang bukan pegawai kantor mengenakan seragam putih."
+        ],
+        key: 2,
+        explanation: "Sebagian pegawai kantor $\\rightarrow$ seragam putih $\\rightarrow$ anggota koperasi. Maka, sebagian anggota koperasi adalah pegawai kantor."
+      },
+      {
+        id: 3,
+        text: "Sebagian mahasiswa baru mengikuti UKM Penalaran.\nSemua yang mengikuti UKM Penalaran harus membuat artikel ilmiah.\nKesimpulan yang tepat adalah .....",
+        options: [
+          "Semua mahasiswa baru harus membuat artikel ilmiah.",
+          "Sebagian yang membuat artikel ilmiah adalah mahasiswa baru.",
+          "Semua yang membuat artikel ilmiah adalah mahasiswa baru.",
+          "Semua mahasiswa baru tidak mengikuti UKM Penalaran.",
+          "Mahasiswa baru wajib bergabung dengan UKM Penalaran."
+        ],
+        key: 1,
+        explanation: "Sebagian mahasiswa baru $\\rightarrow$ UKM Penalaran $\\rightarrow$ buat artikel. Ekuivalen dengan sebagian yang membuat artikel adalah mahasiswa baru."
+      },
+      {
+        id: 4,
+        text: "Beberapa produk UMKM diekspor ke luar negeri.\nSemua produk yang diekspor ke luar negeri memiliki sertifikasi standar internasional.\nKesimpulan yang tepat adalah .....",
+        options: [
+          "Semua produk UMKM memiliki sertifikasi standar internasional.",
+          "Semua yang memiliki sertifikasi standar internasional diekspor ke luar negeri.",
+          "Sebagian yang memiliki sertifikasi standar internasional adalah produk UMKM.",
+          "Tidak ada produk UMKM yang memiliki sertifikasi standar internasional.",
+          "Produk UMKM pasti tidak diekspor ke luar negeri."
+        ],
+        key: 2,
+        explanation: "Sebagian produk UMKM $\\rightarrow$ ekspor $\\rightarrow$ sertifikasi. Ekuivalen dengan sebagian yang memiliki sertifikasi adalah produk UMKM."
+      },
+      {
+        id: 5,
+        text: "Beberapa dokter spesialis bekerja di rumah sakit pusat.\nSemua yang bekerja di rumah sakit pusat harus mengikuti pelatihan kedaruratan.\nKesimpulan yang tepat adalah .....",
+        options: [
+          "Semua dokter spesialis harus mengikuti pelatihan kedaruratan.",
+          "Sebagian yang mengikuti pelatihan kedaruratan adalah dokter spesialis.",
+          "Semua yang mengikuti pelatihan kedaruratan adalah dokter spesialis.",
+          "Dokter spesialis tidak perlu mengikuti pelatihan kedaruratan.",
+          "Sebagian dokter spesialis tidak bekerja di rumah sakit pusat."
+        ],
+        key: 1,
+        explanation: "Sebagian dokter spesialis $\\rightarrow$ RS pusat $\\rightarrow$ pelatihan. Ekuivalen dengan sebagian yang mengikuti pelatihan adalah dokter spesialis."
+      },
+      {
+        id: 6,
+        text: "Jika Budi lulus ujian Matematika dan lulus ujian Bahasa Inggris maka Budi mendapatkan beasiswa. Budi tidak mendapatkan beasiswa.",
+        options: [
+          "Budi lulus ujian Matematika dan lulus ujian Bahasa Inggris.",
+          "Budi tidak lulus ujian Matematika dan tidak lulus ujian Bahasa Inggris.",
+          "Budi tidak lulus ujian Matematika atau tidak lulus ujian Bahasa Inggris.",
+          "Budi lulus ujian Matematika atau tidak lulus ujian Bahasa Inggris.",
+          "Tidak dapat ditarik kesimpulan."
+        ],
+        key: 2,
+        explanation: "Penarikan Modus Tollens: $\\sim (P \\land Q)$. Berdasarkan De Morgan, negasinya menjadi $\\sim P \\lor \\sim Q$ (Budi tidak lulus Mtk atau tidak lulus Bing)."
+      },
+      {
+        id: 7,
+        text: "Jika tim nasional menang di laga kandang dan menang di laga tandang maka tim nasional lolos ke babak final. Tim nasional tidak lolos ke babak final.",
+        options: [
+          "Tim nasional tidak menang di laga kandang atau tidak menang di laga tandang.",
+          "Tim nasional tidak menang di laga kandang dan tidak menang di laga tandang.",
+          "Tim nasional menang di laga kandang atau tidak menang di laga tandang.",
+          "Tim nasional menang di kedua laga tersebut.",
+          "Tidak dapat ditarik kesimpulan."
+        ],
+        key: 0,
+        explanation: "$\\sim (P \\land Q) \\equiv \\sim P \\lor \\sim Q$ (Tidak menang kandang atau tidak menang tandang)."
+      },
+      {
+        id: 8,
+        text: "Jika karyawan datang tepat waktu dan menyelesaikan target penjualan maka karyawan menerima bonus tahunan. Karyawan tidak menerima bonus tahunan.",
+        options: [
+          "Karyawan datang tepat waktu dan tidak menyelesaikan target.",
+          "Karyawan tidak datang tepat waktu atau tidak menyelesaikan target penjualan.",
+          "Karyawan tidak datang tepat waktu dan tidak menyelesaikan target penjualan.",
+          "Karyawan datang tepat waktu atau menyelesaikan target penjualan.",
+          "Tidak dapat ditarik kesimpulan."
+        ],
+        key: 1,
+        explanation: "$\\sim (P \\land Q) \\equiv \\sim P \\lor \\sim Q$ (Tidak datang tepat waktu atau tidak menyelesaikan target)."
+      },
+      {
+        id: 9,
+        text: "Jika debit air meningkat dan tanggul jebol maka pemukiman warga tergenang banjir. Pemukiman warga tidak tergenang banjir.",
+        options: [
+          "Debit air tidak meningkat dan tanggul tidak jebol.",
+          "Debit air meningkat atau tanggul jebol.",
+          "Debit air tidak meningkat atau tanggul tidak jebol.",
+          "Debit air meningkat dan tanggul tidak jebol.",
+          "Tidak dapat ditarik kesimpulan."
+        ],
+        key: 2,
+        explanation: "$\\sim (P \\land Q) \\equiv \\sim P \\lor \\sim Q$ (Debit air tidak meningkat atau tanggul tidak jebol)."
+      },
+      {
+        id: 10,
+        text: "Jika peserta membawa kartu ujian dan membawa KTP asli maka peserta diizinkan masuk ruang ujian. Peserta tidak diizinkan masuk ruang ujian.",
+        options: [
+          "Peserta tidak membawa kartu ujian dan tidak membawa KTP asli.",
+          "Peserta membawa kartu ujian atau membawa KTP asli.",
+          "Peserta tidak membawa kartu ujian atau tidak membawa KTP asli.",
+          "Peserta membawa kartu ujian tetapi tidak membawa KTP asli.",
+          "Tidak dapat ditarik kesimpulan."
+        ],
+        key: 2,
+        explanation: "$\\sim (P \\land Q) \\equiv \\sim P \\lor \\sim Q$ (Tidak membawa kartu atau tidak membawa KTP)."
+      },
+      {
+        id: 11,
+        text: "Jika cuaca hujan lebat maka terjadi genangan air. Jika terjadi genangan air maka arus lalu lintas menjadi macet.",
+        options: [
+          "Jika cuaca tidak hujan lebat maka arus lalu lintas lancar.",
+          "Cuaca tidak hujan lebat atau arus lalu lintas menjadi macet.",
+          "Cuaca hujan lebat atau arus lalu lintas menjadi macet.",
+          "Jika terjadi genangan air maka cuaca hujan lebat.",
+          "Cuaca hujan lebat dan arus lalu lintas menjadi macet."
+        ],
+        key: 1,
+        explanation: "Silogisme: $P \\rightarrow R$ (Jika hujan lebat maka macet). Bentuk ekuivalen $P \\rightarrow R \\equiv \\sim P \\lor R$ (Cuaca tidak hujan lebat atau macet)."
+      },
+      {
+        id: 12,
+        text: "Jika bahan baku langka maka harga produksi naik. Jika harga produksi naik maka harga jual barang meningkat.",
+        options: [
+          "Bahan baku tidak langka atau harga jual barang meningkat.",
+          "Jika harga jual barang meningkat maka bahan baku langka.",
+          "Bahan baku langka atau harga jual barang meningkat.",
+          "Bahan baku tidak langka dan harga jual barang meningkat.",
+          "Jika harga produksi tidak naik maka bahan baku tidak langka."
+        ],
+        key: 0,
+        explanation: "Silogisme: Bahan baku langka $\\rightarrow$ harga jual meningkat. Ekuivalen dengan $\\sim P \\lor R$ (Bahan baku tidak langka atau harga jual meningkat)."
+      },
+      {
+        id: 13,
+        text: "Jika persediaan barang melimpah maka harga barang menurun. Jika harga barang menurun maka daya beli masyarakat meningkat.",
+        options: [
+          "Jika harga barang menurun maka persediaan barang melimpah.",
+          "Persediaan barang melimpah dan daya beli masyarakat meningkat.",
+          "Persediaan barang tidak melimpah atau daya beli masyarakat meningkat.",
+          "Persediaan barang tidak melimpah dan daya beli masyarakat meningkat.",
+          "Jika daya beli masyarakat meningkat maka persediaan barang melimpah."
+        ],
+        key: 2,
+        explanation: "Silogisme: Persediaan melimpah $\\rightarrow$ daya beli meningkat. Ekuivalen dengan $\\sim P \\lor R$ (Persediaan tidak melimpah atau daya beli meningkat)."
+      },
+      {
+        id: 14,
+        text: "Jika listrik padam maka alat pendingin ruangan mati. Jika alat pendingin ruangan mati maka suhu ruangan menjadi panas.",
+        options: [
+          "Listrik padam atau suhu ruangan menjadi panas.",
+          "Jika suhu ruangan panas maka listrik padam.",
+          "Listrik tidak padam atau suhu ruangan menjadi panas.",
+          "Listrik tidak padam dan suhu ruangan menjadi panas.",
+          "Jika alat pendingin ruangan mati maka listrik padam."
+        ],
+        key: 2,
+        explanation: "Silogisme: Listrik padam $\\rightarrow$ suhu panas. Ekuivalen dengan $\\sim P \\lor R$ (Listrik tidak padam atau suhu panas)."
+      },
+      {
+        id: 15,
+        text: "Jika perusahaan memperoleh untung besar maka karyawan mendapat THR penuh. Jika karyawan mendapat THR penuh maka kesejahteraan keluarga meningkat.",
+        options: [
+          "Perusahaan tidak memperoleh untung besar atau kesejahteraan keluarga meningkat.",
+          "Perusahaan memperoleh untung besar atau kesejahteraan keluarga meningkat.",
+          "Jika kesejahteraan keluarga meningkat maka perusahaan untung besar.",
+          "Perusahaan tidak memperoleh untung besar dan kesejahteraan keluarga meningkat.",
+          "Karyawan mendapat THR penuh jika kesejahteraan meningkat."
+        ],
+        key: 0,
+        explanation: "Silogisme: Untung besar $\\rightarrow$ kesejahteraan meningkat. Ekuivalen dengan $\\sim P \\lor R$ (Perusahaan tidak untung besar atau kesejahteraan meningkat)."
+      },
+      {
+        id: 16,
+        text: "Jika semua anggota tim hadir tepat waktu maka rapat dimulai sesuai jadwal. Rapat tidak dimulai sesuai jadwal.",
+        options: [
+          "Semua anggota tim tidak hadir tepat waktu.",
+          "Semua anggota tim hadir tepat waktu.",
+          "Sebagian anggota tim tidak hadir tepat waktu.",
+          "Beberapa anggota tim hadir tepat waktu.",
+          "Tidak dapat ditarik kesimpulan."
+        ],
+        key: 2,
+        explanation: "Modus Tollens menghasilkan negasi dari kuantor universal (Semua A). Negasi dari \"Semua\" adalah \"Sebagian/Beberapa ... tidak ...\". Jadi jawabannya: Sebagian anggota tim tidak hadir tepat waktu."
+      },
+      {
+        id: 17,
+        text: "Jika semua siswa lulus ujian nasional maka sekolah mendapatkan penghargaan. Sekolah tidak mendapatkan penghargaan.",
+        options: [
+          "Semua siswa tidak lulus ujian nasional.",
+          "Sebagian siswa tidak lulus ujian nasional.",
+          "Beberapa siswa lulus ujian nasional.",
+          "Semua siswa lulus ujian nasional.",
+          "Tidak dapat ditarik kesimpulan."
+        ],
+        key: 1,
+        explanation: "Negasi dari \"Semua siswa lulus\" adalah \"Sebagian siswa tidak lulus\"."
+      },
+      {
+        id: 18,
+        text: "Jika semua mesin berfungsi normal maka proses produksi berjalan lancar. Proses produksi tidak berjalan lancar.",
+        options: [
+          "Semua mesin tidak berfungsi normal.",
+          "Sebagian mesin tidak berfungsi normal.",
+          "Beberapa mesin berfungsi normal.",
+          "Semua mesin berfungsi normal.",
+          "Tidak dapat ditarik kesimpulan."
+        ],
+        key: 1,
+        explanation: "Negasi dari \"Semua mesin berfungsi\" adalah \"Sebagian mesin tidak berfungsi\"."
+      },
+      {
+        id: 19,
+        text: "Jika semua mobil menggunakan bahan bakar ramah lingkungan maka tingkat polusi udara menurun. Tingkat polusi udara tidak menurun.",
+        options: [
+          "Beberapa mobil tidak menggunakan bahan bakar ramah lingkungan.",
+          "Semua mobil tidak menggunakan bahan bakar ramah lingkungan.",
+          "Semua mobil menggunakan bahan bakar ramah lingkungan.",
+          "Beberapa mobil menggunakan bahan bakar ramah lingkungan.",
+          "Tidak dapat ditarik kesimpulan."
+        ],
+        key: 0,
+        explanation: "Negasi dari \"Semua mobil menggunakan\" adalah \"Beberapa mobil tidak menggunakan\"."
+      },
+      {
+        id: 20,
+        text: "Jika semua peserta membawa dokumen lengkap maka proses verifikasi selesai cepat. Proses verifikasi tidak selesai cepat.",
+        options: [
+          "Semua peserta tidak membawa dokumen lengkap.",
+          "Semua peserta membawa dokumen lengkap.",
+          "Sebagian peserta tidak membawa dokumen lengkap.",
+          "Beberapa peserta membawa dokumen lengkap.",
+          "Tidak dapat ditarik kesimpulan."
+        ],
+        key: 2,
+        explanation: "Negasi dari \"Semua peserta membawa\" adalah \"Sebagian peserta tidak membawa\"."
+      },
+      {
+        id: 21,
+        text: "Jika suatu daerah dilanda hujan deras, maka jalan utama akan tergenang air.\nDiketahui bahwa saat ini jalan utama tergenang air.\nManakah kesimpulan yang pasti benar berdasarkan pernyataan di atas?",
+        options: [
+          "Daerah tersebut pasti dilanda hujan deras.",
+          "Jika jalan utama tidak tergenang air, maka daerah tersebut tidak dilanda hujan deras.",
+          "Jalan utama tergenang air hanya jika tidak ada hujan deras.",
+          "Daerah tersebut dilanda hujan deras atau jalan utama tergenang air.",
+          "Jalan utama tergenang air karena terjadi saluran tersumbat."
+        ],
+        key: 1,
+        explanation: "Kontraposisi ($\\sim Q \\rightarrow \\sim P$) dari $P \\rightarrow Q$ bernilai sama/pasti benar."
+      },
+      {
+        id: 22,
+        text: "Jika semua karyawan mencapai target penjualan, maka perusahaan akan memberikan bonus akhir tahun.\nDiketahui perusahaan tidak memberikan bonus akhir tahun.\nKesimpulan yang tepat adalah .....",
+        options: [
+          "Semua karyawan mencapai target penjualan.",
+          "Semua karyawan tidak mencapai target penjualan.",
+          "Ada karyawan yang tidak mencapai target penjualan.",
+          "Perusahaan mengalami kerugian operasional."
+        ],
+        key: 2,
+        explanation: "Modus Tollens: $\\sim Q \\Rightarrow \\sim P$. Negasi dari \"Semua\" adalah \"Ada/Sebagian ... tidak ...\"."
+      },
+      {
+        id: 23,
+        text: "Jika listrik padam, maka pendingin ruangan akan mati.\nSaat ini pendingin ruangan mati.\nKesimpulan yang tepat adalah .....",
+        options: [
+          "Listrik pasti sedang padam.",
+          "Listrik tidak padam.",
+          "Pendingin ruangan rusak.",
+          "Tidak dapat ditarik kesimpulan yang pasti.",
+          "Sakelar pendingin ruangan sedang dimatikan."
+        ],
+        key: 3,
+        explanation: "Menegaskan akibat ($Q$) adalah kesalahan logika (Affirming the Consequent)."
+      },
+      {
+        id: 24,
+        text: "Jika seorang atlet berlatih setiap hari, maka stamina atlet tersebut akan meningkat.\nDhani tidak berlatih setiap hari.\nKesimpulan yang tepat adalah .....",
+        options: [
+          "Stamina Dhani tidak akan meningkat.",
+          "Stamina Dhani pasti tetap meningkat.",
+          "Dhani bukan seorang atlet profesional.",
+          "Dhani mengalami cedera fisik.",
+          "Tidak dapat ditarik kesimpulan yang pasti."
+        ],
+        key: 4,
+        explanation: "Menolak sebab ($\\sim P$) adalah kesalahan logika (Denying the Antecedent)."
+      },
+      {
+        id: 25,
+        text: "Jika toko buka, maka lampu teras akan dinyalakan.\nDiketahui lampu teras saat ini dinyalakan.\nManakah pernyataan yang paling tepat?",
+        options: [
+          "Toko pasti sedang buka.",
+          "Toko pasti sedang tutup.",
+          "Toko mungkin sedang buka.",
+          "Lampu teras dinyalakan karena rusak.",
+          "Toko buka hanya pada sore hari."
+        ],
+        key: 2,
+        explanation: "Mengetahui $Q$ terjadi hanya menunjukkan kondisi $P$ mungkin terjadi, tetapi tidak pasti."
+      },
+      {
+        id: 26,
+        text: "Jika peserta lulus ujian kelayakan, maka peserta akan dipanggil untuk wawancara.\nRian tidak dipanggil untuk wawancara.\nManakah pernyataan yang paling tepat mengenai Rian?",
+        options: [
+          "Rian mungkin lulus ujian kelayakan.",
+          "Rian pasti lulus ujian kelayakan.",
+          "Rian tidak lulus ujian kelayakan.",
+          "Rian mungkin lupa menghadiri wawancara.",
+          "Rian mengundurkan diri dari seleksi."
+        ],
+        key: 2,
+        explanation: "Modus Tollens: Tidak dipanggil ($\\sim Q$) $\\Rightarrow$ Tidak lulus ($\\sim P$)."
+      },
+      {
+        id: 27,
+        text: "Diberikan pernyataan: \"Jika harga bahan bakar naik, maka ongkos transportasi umum akan meningkat.\"\nBentuk konvers dari pernyataan tersebut adalah .....",
+        options: [
+          "Jika ongkos transportasi umum meningkat, maka harga bahan bakar naik.",
+          "Jika harga bahan bakar tidak naik, maka ongkos transportasi umum tidak meningkat.",
+          "Jika ongkos transportasi umum tidak meningkat, maka harga bahan bakar tidak naik.",
+          "Harga bahan bakar naik dan ongkos transportasi umum tidak meningkat.",
+          "Harga bahan bakar tidak naik atau ongkos transportasi umum meningkat."
+        ],
+        key: 0,
+        explanation: "Konvers merubah posisi: $Q \\rightarrow P$."
+      },
+      {
+        id: 28,
+        text: "Diberikan pernyataan: \"Jika seseorang rajin membaca, maka wawasannya bertambah luas.\"\nBentuk konvers dari pernyataan tersebut adalah .....",
+        options: [
+          "Jika wawasan seseorang bertambah luas, maka ia rajin membaca.",
+          "Jika seseorang tidak rajin membaca, maka wawasannya tidak bertambah luas.",
+          "Jika wawasan seseorang tidak bertambah luas, maka ia tidak rajin membaca.",
+          "Seseorang rajin membaca atau wawasannya tidak bertambah luas.",
+          "Seseorang tidak rajin membaca dan wawasannya bertambah luas."
+        ],
+        key: 0,
+        explanation: "Konvers merubah posisi: $Q \\rightarrow P$."
+      },
+      {
+        id: 29,
+        text: "Diberikan pernyataan: \"Jika siswa terlambat masuk sekolah, maka siswa mendapat teguran.\"\nBentuk invers dari pernyataan tersebut adalah .....",
+        options: [
+          "Jika siswa tidak mendapat teguran, maka siswa tidak terlambat masuk sekolah.",
+          "Jika siswa mendapat teguran, maka siswa terlambat masuk sekolah.",
+          "Jika siswa tidak terlambat masuk sekolah, maka siswa tidak mendapat teguran.",
+          "Siswa terlambat masuk sekolah dan tidak mendapat teguran.",
+          "Siswa tidak terlambat masuk sekolah atau mendapat teguran."
+        ],
+        key: 2,
+        explanation: "Invers memberi negasi pada masing-masing pernyataan: $\\sim P \\rightarrow \\sim Q$."
+      },
+      {
+        id: 30,
+        text: "Diberikan pernyataan: \"Jika tanaman diberi pupuk organik, maka buahnya tumbuh lebat.\"\nBentuk invers dari pernyataan tersebut adalah .....",
+        options: [
+          "Jika buah tanaman tidak tumbuh lebat, maka tanaman tidak diberi pupuk organik.",
+          "Jika tanaman tidak diberi pupuk organik, maka buahnya tidak tumbuh lebat.",
+          "Jika buah tanaman tumbuh lebat, maka tanaman diberi pupuk organik.",
+          "Tanaman diberi pupuk organik tetapi buahnya tidak tumbuh lebat."
+        ],
+        key: 1,
+        explanation: "Invers: $\\sim P \\rightarrow \\sim Q$."
+      },
+      {
+        id: 31,
+        text: "Diberikan pernyataan: \"Jika cuaca cerah, maka penerbangan udara berjalan lancar.\"\nBentuk kontraposisi dari pernyataan tersebut adalah .....",
+        options: [
+          "Jika penerbangan udara berjalan lancar, maka cuaca cerah.",
+          "Jika cuaca tidak cerah, maka penerbangan udara tidak berjalan lancar.",
+          "Jika penerbangan udara tidak berjalan lancar, maka cuaca tidak cerah.",
+          "Cuaca tidak cerah atau penerbangan udara berjalan lancar."
+        ],
+        key: 2,
+        explanation: "Kontraposisi membalik dan menepiskan: $\\sim Q \\rightarrow \\sim P$."
+      },
+      {
+        id: 32,
+        text: "Diberikan pernyataan: \"Jika pasokan beras mencukupi, maka harga beras di pasar stabil.\"\nBentuk kontraposisi dari pernyataan tersebut adalah .....",
+        options: [
+          "Jika harga beras di pasar tidak stabil, maka pasokan beras tidak mencukupi.",
+          "Jika harga beras di pasar stabil, maka pasokan beras mencukupi.",
+          "Jika pasokan beras tidak mencukupi, maka harga beras di pasar tidak stabil."
+        ],
+        key: 0,
+        explanation: "Kontraposisi: $\\sim Q \\rightarrow \\sim P$."
+      },
+      {
+        id: 33,
+        text: "Negasi dari pernyataan \"Jika komputer terhubung ke internet, maka data dapat disinkronkan\" adalah .....",
+        options: [
+          "Komputer terhubung ke internet dan data tidak dapat disinkronkan.",
+          "Komputer tidak terhubung ke internet atau data dapat disinkronkan.",
+          "Jika komputer tidak terhubung ke internet, maka data tidak dapat disinkronkan.",
+          "Jika data tidak dapat disinkronkan, maka komputer tidak terhubung ke internet."
+        ],
+        key: 0,
+        explanation: "Negasi dari implikasi adalah $P \\land \\sim Q$."
+      },
+      {
+        id: 34,
+        text: "Ingkaran dari pernyataan \"Jika pegawai bekerja lembur, maka pegawai menerima uang makan\" adalah .....",
+        options: [
+          "Jika pegawai tidak bekerja lembur, maka pegawai tidak menerima uang makan.",
+          "Pegawai bekerja lembur dan pegawai tidak menerima uang makan.",
+          "Pegawai tidak bekerja lembur atau menerima uang makan."
+        ],
+        key: 1,
+        explanation: "Negasi implikasi: $P \\land \\sim Q$."
+      },
+      {
+        id: 35,
+        text: "Pernyataan yang setara (ekuivalen) dengan \"Jika nilai ujian tinggi, maka siswa mendapatkan hadiah\" adalah .....",
+        options: [
+          "Jika siswa tidak mendapatkan hadiah, maka nilai ujian tidak tinggi.",
+          "Jika nilai ujian tidak tinggi, maka siswa tidak mendapatkan hadiah.",
+          "Jika siswa mendapatkan hadiah, maka nilai ujian tinggi."
+        ],
+        key: 0,
+        explanation: "Ekuivalen tipe kontraposisi ($\\sim Q \\rightarrow \\sim P$)."
+      },
+      {
+        id: 36,
+        text: "Pernyataan yang setara dengan \"Jika air sungai tercemar, maka ekosistem ikan terganggu\" adalah .....",
+        options: [
+          "Jika ekosistem ikan tidak terganggu, maka air sungai tidak tercemar.",
+          "Jika air sungai tidak tercemar, maka ekosistem ikan tidak terganggu.",
+          "Air sungai tercemar dan ekosistem ikan tidak terganggu."
+        ],
+        key: 0,
+        explanation: "Ekuivalen tipe kontraposisi ($\\sim Q \\rightarrow \\sim P$)."
+      },
+      {
+        id: 37,
+        text: "Pernyataan yang ekuivalen dengan \"Jika debit air naik, maka pintu air dibuka\" adalah .....",
+        options: [
+          "Debit air tidak naik atau pintu air dibuka.",
+          "Debit air naik atau pintu air dibuka.",
+          "Debit air tidak naik dan pintu air tidak dibuka."
+        ],
+        key: 0,
+        explanation: "Ekuivalen tipe disjungsi ($\\sim P \\lor Q$)."
+      },
+      {
+        id: 38,
+        text: "Pernyataan yang ekuivalen dengan \"Jika syarat dokumen lengkap, maka pendaftaran diterima\" adalah .....",
+        options: [
+          "Syarat dokumen tidak lengkap atau pendaftaran diterima.",
+          "Syarat dokumen lengkap atau pendaftaran tidak diterima.",
+          "Jika pendaftaran diterima, maka syarat dokumen lengkap.",
+          "Syarat dokumen tidak lengkap atau pendaftaran diterima.",
+          "Syarat dokumen lengkap atau pendaftaran tidak diterima."
+        ],
+        key: 0,
+        explanation: "Ekuivalen tipe disjungsi ($\\sim P \\lor Q$)."
+      }
+    ];
+
+    // STATE APLIKASI
+    let currentIndex = 0;
+    let userAnswers = {}; 
+    let doubtStatus = {}; 
+    let timeRemaining = 28 * 60; // 28 Menit
+    let timerInterval = null;
+
+    // LOGIN & PENGERJAAN
+    function startExam(event) {
+      event.preventDefault();
+      const nameInput = document.getElementById("student-name").value;
+      const passInput = document.getElementById("student-password").value;
+      const errorMsg = document.getElementById("password-error");
+
+      // Cek Password Login
+      if (passInput !== "skd26") {
+        errorMsg.classList.remove("hidden");
+        return;
+      }
+      errorMsg.classList.add("hidden");
+
+      if (!nameInput.trim()) return;
+
+      document.getElementById("display-name").textContent = nameInput;
+      document.getElementById("login-page").classList.add("hidden");
+      document.getElementById("exam-page").classList.remove("hidden");
+      document.getElementById("exam-page").classList.add("flex");
+
+      initExam();
+    }
+
+    function initExam() {
+      renderGrid();
+      loadQuestion(currentIndex);
+      startTimer();
+    }
+
+    // HITUNG MUNDUR WAKTU (28 Menit)
+    function startTimer() {
+      timerInterval = setInterval(() => {
+        if (timeRemaining <= 0) {
+          clearInterval(timerInterval);
+          alert("Waktu pengerjaan 28 menit telah habis!");
+          finishExam();
+          return;
+        }
+        timeRemaining--;
+
+        const hours = String(Math.floor(timeRemaining / 3600)).padStart(2, '0');
+        const minutes = String(Math.floor((timeRemaining % 3600) / 60)).padStart(2, '0');
+        const seconds = String(timeRemaining % 60).padStart(2, '0');
+
+        document.getElementById("timer").textContent = `${hours}:${minutes}:${seconds}`;
+      }, 1000);
+    }
+
+    // TAMPILKAN SOAL & RENDER MATHJAX
+    function loadQuestion(index) {
+      currentIndex = index;
+      const q = questions[index];
+
+      document.getElementById("question-number").textContent = index + 1;
+      document.getElementById("question-text").textContent = q.text;
+
+      const optionsContainer = document.getElementById("options-container");
+      optionsContainer.innerHTML = "";
+
+      const labels = ["A", "B", "C", "D", "E"];
+      q.options.forEach((opt, optIdx) => {
+        const isSelected = userAnswers[index] === optIdx;
+        const btn = document.createElement("label");
+        btn.className = `flex items-center gap-3 p-3.5 border rounded-lg cursor-pointer transition ${
+          isSelected 
+            ? 'bg-sky-50 border-sky-500 font-semibold text-sky-900 ring-1 ring-sky-500' 
+            : 'hover:bg-gray-50 border-gray-300 text-gray-700'
+        }`;
+
+        btn.innerHTML = `
+          <input type="radio" name="option" value="${optIdx}" ${isSelected ? 'checked' : ''} 
+            onchange="selectOption(${optIdx})" class="w-4 h-4 text-sky-600 focus:ring-sky-500">
+          <span class="w-6 h-6 flex items-center justify-center bg-gray-200 border rounded-full text-xs font-bold shrink-0">${labels[optIdx]}</span>
+          <span class="text-sm md:text-base">${opt}</span>
+        `;
+        optionsContainer.appendChild(btn);
+      });
+
+      document.getElementById("cb-doubt").checked = !!doubtStatus[index];
+      document.getElementById("btn-prev").disabled = index === 0;
+      
+      const btnNext = document.getElementById("btn-next");
+      if (index === questions.length - 1) {
+        btnNext.textContent = "Selesai";
+        btnNext.className = "bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded text-sm transition shadow";
+      } else {
+        btnNext.innerHTML = "Soal Berikutnya &raquo;";
+        btnNext.className = "bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded text-sm transition shadow";
+      }
+
+      renderGrid();
+
+      // Render ulang MathJax agar formula matematika tampil tegak & jelas
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise();
+      }
+    }
+
+    function selectOption(optIdx) {
+      userAnswers[currentIndex] = optIdx;
+      renderGrid();
+      loadQuestion(currentIndex);
+    }
+
+    function toggleDoubt() {
+      const isChecked = document.getElementById("cb-doubt").checked;
+      doubtStatus[currentIndex] = isChecked;
+      renderGrid();
+    }
+
+    function prevQuestion() {
+      if (currentIndex > 0) loadQuestion(currentIndex - 1);
+    }
+
+    function handleNextOrFinish() {
+      if (currentIndex < questions.length - 1) {
+        loadQuestion(currentIndex + 1);
+      } else {
+        if (confirm("Apakah Anda yakin ingin menyelesaikan ujian ini?")) {
+          finishExam();
+        }
+      }
+    }
+
+    // RENDER DAFTAR KOTAK NOMOR SOAL
+    function renderGrid() {
+      const grid = document.getElementById("question-grid");
+      grid.innerHTML = "";
+
+      questions.forEach((_, idx) => {
+        const btn = document.createElement("button");
+        btn.onclick = () => loadQuestion(idx);
+        
+        const isAnswered = userAnswers.hasOwnProperty(idx);
+        const isDoubt = doubtStatus[idx];
+        const isCurrent = idx === currentIndex;
+
+        let colorClass = "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"; 
+        
+        if (isDoubt) {
+          colorClass = "bg-yellow-400 text-black border-yellow-500 font-bold"; 
+        } else if (isAnswered) {
+          colorClass = "bg-green-500 text-white border-green-600 font-bold"; 
+        }
+
+        let ringClass = isCurrent ? "ring-2 ring-offset-1 ring-sky-600 font-black" : "";
+
+        btn.className = `h-10 w-full flex items-center justify-center rounded border text-sm transition ${colorClass} ${ringClass}`;
+        btn.textContent = idx + 1;
+
+        grid.appendChild(btn);
+      });
+    }
+
+    // SELESAI UJIAN & HITUNG SKOR
+    function finishExam() {
+      clearInterval(timerInterval);
+
+      let correctCount = 0;
+      let wrongCount = 0;
+
+      questions.forEach((q, idx) => {
+        if (userAnswers[idx] === q.key) {
+          correctCount++;
+        } else {
+          wrongCount++;
+        }
+      });
+
+      const finalScore = correctCount * 5;
+
+      document.getElementById("result-student-name").textContent = document.getElementById("student-name").value;
+      document.getElementById("score-correct").textContent = correctCount;
+      document.getElementById("score-wrong").textContent = wrongCount;
+      document.getElementById("score-final").textContent = finalScore;
+
+      renderReview();
+
+      document.getElementById("exam-page").classList.add("hidden");
+      document.getElementById("result-page").classList.remove("hidden");
+      document.getElementById("result-page").classList.add("flex");
+
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise();
+      }
+    }
+
+    // RENDER PEMBAHASAN
+    function renderReview() {
+      const container = document.getElementById("review-container");
+      container.innerHTML = "";
+
+      const labels = ["A", "B", "C", "D", "E"];
+
+      questions.forEach((q, idx) => {
+        const userAns = userAnswers[idx];
+        const isCorrect = userAns === q.key;
+        const userAnsText = userAns !== undefined ? `${labels[userAns]}. ${q.options[userAns]}` : "Tidak dijawab";
+        const keyText = `${labels[q.key]}. ${q.options[q.key]}`;
+
+        const item = document.createElement("div");
+        item.className = `p-4 border rounded-lg ${isCorrect ? 'border-green-300 bg-green-50/30' : 'border-red-300 bg-red-50/30'}`;
+
+        item.innerHTML = `
+          <div class="flex justify-between items-start mb-2">
+            <span class="font-bold text-gray-800">Soal No. ${idx + 1}</span>
+            <span class="px-2.5 py-0.5 rounded text-xs font-bold ${isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+              ${isCorrect ? 'BENAR (+5)' : 'SALAH (+0)'}
+            </span>
+          </div>
+          <p class="text-gray-800 mb-3 whitespace-pre-line">${q.text}</p>
+          <div class="text-sm space-y-1 mb-3">
+            <div><span class="font-semibold text-gray-600">Jawaban Anda:</span> <span class="${isCorrect ? 'text-green-700 font-medium' : 'text-red-600 font-medium'}">${userAnsText}</span></div>
+            <div><span class="font-semibold text-gray-600">Kunci Jawaban:</span> <span class="text-green-700 font-semibold">${keyText}</span></div>
+          </div>
+          <div class="bg-white p-3 rounded border border-gray-200 text-xs md:text-sm text-gray-700">
+            <span class="font-bold text-sky-800 block mb-1">Pembahasan:</span>
+            ${q.explanation}
+          </div>
+        `;
+
+        container.appendChild(item);
+      });
+    }
+  </script>
+</body>
+</html>
